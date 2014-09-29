@@ -2,6 +2,8 @@ import java.io.BufferedReader;
 import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 
 
 /**
@@ -15,17 +17,23 @@ public class Main {
 	private Node root;
 	private int noofnodes;
 	private int distanceMatrix[][];
+	private MessageBus messageBus = new MessageBus();
+	private List<Thread> nodeList;
+	
+	
 	
 	public static void main(String[] args) {
 		Main simulator = new Main();
 		//read and process input from input file
 		simulator.processInput();
+		simulator.printInfo();
+		simulator.init();
 	}
 	
 	public void processInput(){
 		FileReader inputFileReader;
 		try {
-			inputFileReader = new FileReader("input.txt");
+			inputFileReader = new FileReader("data/input.txt");
 			BufferedReader br = new BufferedReader(inputFileReader);
 			noofnodes = Integer.parseInt(br.readLine());
 			distanceMatrix = new int[noofnodes][noofnodes];
@@ -48,6 +56,28 @@ public class Main {
 			System.out.println("Not able to read from file."+e.getMessage());
 			e.printStackTrace();
 		}		
+		
+	}
+	
+	public void init(){
+		
+		nodeList = new ArrayList<Thread>();
+		for(int i=0;i<noofnodes;i++){
+			Node node = new Node(i,messageBus);
+			Thread nodeThread = new Thread(node);
+			nodeList.add(nodeThread);
+			nodeThread.start();
+		}
+		
+	}
+	
+	public void printInfo(){
+		
+		for(int i = 0; i< noofnodes;i++){
+			for(int j=0;j<noofnodes;j++){
+				System.out.println(distanceMatrix[i][j]);
+			}
+		}
 		
 	}
 	
