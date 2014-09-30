@@ -64,6 +64,14 @@ public class Main {
 		nodeList = new ArrayList<Thread>();
 		for(int i=0;i<noofnodes;i++){
 			Node node = new Node(i,messageBus);
+			//initially each node belongs to a single fragment
+			Fragment frag = new Fragment();
+			frag.setRoot(node);
+			frag.setLevel(0);
+			frag.setName("Fragment"+i);
+			node.setDistanceMatrix(distanceMatrix);
+			node.setNoofnodes(noofnodes);
+			node.setFragment(frag);
 			Thread nodeThread = new Thread(node);
 			nodeList.add(nodeThread);
 			nodeThread.start();
