@@ -18,7 +18,8 @@ public class Main {
 	private int noofnodes;
 	private int distanceMatrix[][];
 	private MessageBus messageBus = new MessageBus();
-	private List<Thread> nodeList;
+	private List<Node> nodeList;
+	private List<Thread> threadList;
 	
 	
 	
@@ -26,8 +27,9 @@ public class Main {
 		Main simulator = new Main();
 		//read and process input from input file
 		simulator.processInput();
-		simulator.printInfo();
+		//simulator.printInfo();
 		simulator.init();
+		simulator.printStats();
 	}
 	
 	public void processInput(){
@@ -61,7 +63,8 @@ public class Main {
 	
 	public void init(){
 		
-		nodeList = new ArrayList<Thread>();
+		nodeList = new ArrayList<Node>();
+		threadList = new ArrayList<Thread>();
 		for(int i=0;i<noofnodes;i++){
 			Node node = new Node(i,messageBus);
 			//initially each node belongs to a single fragment
@@ -73,10 +76,24 @@ public class Main {
 			node.setNoofnodes(noofnodes);
 			node.setFragment(frag);
 			Thread nodeThread = new Thread(node);
-			nodeList.add(nodeThread);
+			nodeList.add(node);
+			threadList.add(nodeThread);
 			nodeThread.start();
 		}
 		
+	}
+	
+	public void printStats(){
+		for(int i=0;i<noofnodes;i++){
+			try {
+				threadList.get(i).join();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
+		}
+		for(int i=0;i<noofnodes;i++){
+			System.out.println(nodeList.get(i));
+		}
 	}
 	
 	public void printInfo(){

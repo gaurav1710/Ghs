@@ -38,6 +38,9 @@ public class Node implements Runnable {
 		this.messageBus = messageBus;
 		this.state = NodeState.SLEEP;
 		this.status = new Status[Property.MAX_SIZE];
+		for(int i=0;i<Property.MAX_SIZE;i++){
+			status[i] = Status.NONE;
+		}
 	}
 
 	@Override
@@ -97,30 +100,51 @@ public class Node implements Runnable {
 			MessageType type = message.getType();
 			switch (type) {
 			case CONNECT:
+				if(Property.DEBUG){
+					System.out.println("CONNECT message received by (Node"+nodeId+"):"+message);
+				}
 				processConnectMessage(message);
 				break;
 
 			case INITIATE:
+				if(Property.DEBUG){
+					System.out.println("INITIALIZE message received by (Node"+nodeId+"):"+message);
+				}
 				processInitiateMessage(message);
 				break;
 
 			case TEST:
+				if(Property.DEBUG){
+					System.out.println("TEST message received by (Node"+nodeId+"):"+message);
+				}
 				processTestMessage(message);
 				break;
 
 			case ACCEPT:
+				if(Property.DEBUG){
+					System.out.println("ACCEPT message received by (Node"+nodeId+"):"+message);
+				}
 				processAcceptMessage(message);
 				break;
 
 			case REJECT:
+				if(Property.DEBUG){
+					System.out.println("REJECT message received by (Node"+nodeId+"):"+message);
+				}
 				processRejectMessage(message);
 				break;
 
 			case REPORT:
+				if(Property.DEBUG){
+					System.out.println("REPORT message received by (Node"+nodeId+"):"+message);
+				}
 				processReportMessage(message);
 				break;
 				
 			case CHANGEROOT:
+				if(Property.DEBUG){
+					System.out.println("CHANGEROOT message received by (Node"+nodeId+"):"+message);
+				}
 				processChangeRootMessage(message);
 				break;
 			}
@@ -142,7 +166,7 @@ public class Node implements Runnable {
 			initMessage.setType(MessageType.INITIATE);
 			System.out.println("Sending INITIATE message (Node" + nodeId
 					+ " )...");
-			sendMessage(message);
+			sendMessage(initMessage);
 		} else if (status[message.getFrom()] == Status.BASIC) {
 			return;
 		} else {
@@ -156,7 +180,7 @@ public class Node implements Runnable {
 			initMessage.setState(state);
 			System.out.println("Sending INITIATE message (Node" + nodeId
 					+ " )...");
-			sendMessage(message);
+			sendMessage(initMessage);
 		}
 	}
 
@@ -177,7 +201,7 @@ public class Node implements Runnable {
 				initMessage.setState(message.getState());
 				System.out.println("Sending INITIATE message (Node" + nodeId
 						+ " )...");
-				sendMessage(message);
+				sendMessage(initMessage);
 			}
 		}
 
@@ -208,11 +232,14 @@ public class Node implements Runnable {
 			testMessage.setFragName(fragment.getName());
 			testMessage.setFrom(nodeId);
 			testMessage.setTo(testNode);
+			sendMessage(testMessage);
 		} else {
 			testNode = 0;
 			report();
 		}
 	}
+
+	
 
 	private void report() {
 
@@ -285,6 +312,9 @@ public class Node implements Runnable {
 				changeRoot();
 			} else if (message.getBestWeight() == bestWeight
 					&& bestWeight == Integer.MAX_VALUE) {
+				if(Property.DEBUG){
+					System.out.println("Processing completed.");
+				}
 				System.exit(0);
 			}
 		}
@@ -319,10 +349,7 @@ public class Node implements Runnable {
 		Message message = null;
 		long start = System.currentTimeMillis();
 		while (message == null) {
-			if (Property.DEBUG) {
-				System.out.println("Polling the bus for new messages (Node "
-						+ nodeId + ")..");
-			}
+			
 			message = messageBus.getMessage(nodeId);
 			long end = System.currentTimeMillis() - start;
 			if (end >= Property.POLL_TIMEOUT) {
@@ -395,6 +422,12 @@ public class Node implements Runnable {
 
 	public void setNoofnodes(int noofnodes) {
 		this.noofnodes = noofnodes;
+	}
+	
+	@Override
+	public String toString() {
+		return "Node [fragment=" + fragment + ", state=" + state + ", nodeId="
+				+ nodeId + ", parent=" + parent + "]";
 	}
 
 }

@@ -21,7 +21,6 @@ public class MessageBus {
 	
 	public Message getMessage(int nodeId){
 		synchronized(lock){
-			System.out.println("List Size:"+messageStore.size());
 			for(int i = 0 ; i < messageStore.size();i++){
 				if(messageStore.get(i).getTo() == nodeId){
 					Message message = messageStore.get(i);

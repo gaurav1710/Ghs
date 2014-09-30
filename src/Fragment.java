@@ -45,7 +45,7 @@ public class Fragment {
 	
 	@Override
 	public String toString() {
-		return "Fragment [root=" + root + ", level=" + level + ", name=" + name
+		return "Fragment [ level=" + level + ", name=" + name
 				+ ", leastOutgoingEdge=" + leastOutgoingEdge + "]";
 	}
 	
