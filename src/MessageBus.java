@@ -11,15 +11,21 @@ public class MessageBus {
 	
 	List<Message> messageStore = new ArrayList<Message>(Property.MAX_SIZE);
 	String lock = "lock1";
-	String lock2 = "lock2";
 	
 	public void put(Message message){
-		synchronized(lock2){
+		if(Property.DEBUG){
+			System.out.println("Adding message to bus.");
+		}
+		synchronized(lock){
 			messageStore.add(message);
 		}
+		
 	}
 	
 	public Message getMessage(int nodeId){
+		if(Property.DEBUG){
+			System.out.println("Reading message from bus (Node "+nodeId+")");
+		}
 		synchronized(lock){
 			for(int i = 0 ; i < messageStore.size();i++){
 				if(messageStore.get(i).getTo() == nodeId){

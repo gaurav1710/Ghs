@@ -94,6 +94,9 @@ public class Main {
 		for(int i=0;i<noofnodes;i++){
 			System.out.println(nodeList.get(i));
 		}
+		for(int i=0;i<noofnodes;i++){
+			nodeList.get(i).nodeStats();
+		}
 	}
 	
 	public void printInfo(){
