@@ -55,14 +55,14 @@ public class Node implements Runnable {
 		}
 		initialize();
 
-		// while(true){
-		Message message = poll();
-		if (Property.DEBUG) {
-			System.out.println("Got message from the message bus (Node "
-					+ nodeId + "):" + message);
+		while (true) {
+			Message message = poll();
+			if (Property.DEBUG) {
+				System.out.println("Got message from the message bus (Node "
+						+ nodeId + "):" + message);
+			}
+			processMessage(message);
 		}
-		processMessage(message);
-		// }
 	}
 
 	// Algo 1:Initialization
@@ -185,7 +185,7 @@ public class Node implements Runnable {
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-		} else {
+		} else if (fragment.getLevel() == message.getLevel()) {
 			// combine with EQ rule
 			Message initMessage = new Message();
 			initMessage.setType(MessageType.INITIATE);
@@ -256,8 +256,11 @@ public class Node implements Runnable {
 	}
 
 	private void report() {
+		if (rec == -1)
+			rec = 0;
 		if (rec >= 0 && rec < noofnodes) {
-			if (status[rec] == Status.BRANCH && parent != rec && testNode == -1) {
+			if (/* status[rec] == Status.BRANCH && */parent != rec
+					&& testNode == -1) {
 				state = NodeState.FOUND;
 				Message reportMessage = new Message();
 				reportMessage.setType(MessageType.REPORT);
@@ -270,13 +273,13 @@ public class Node implements Runnable {
 	}
 
 	private void processTestMessage(Message message) {
-		if (fragment.getLevel() < message.getLevel()){
+		if (fragment.getLevel() < message.getLevel()) {
 			try {
 				Thread.sleep(Property.WAIT);
 			} catch (InterruptedException e) {
 				e.printStackTrace();
 			}
-			//return;
+			// return;
 		}
 		if (fragment.getName().compareToIgnoreCase(message.getFragName()) == 0) {
 			// Internal edge
@@ -340,7 +343,9 @@ public class Node implements Runnable {
 				if (Property.DEBUG) {
 					System.out.println("Processing completed.");
 				}
-				System.exit(0);
+				Main.completed = true;
+				return;
+				//System.exit(0);
 			}
 		}
 

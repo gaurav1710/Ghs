@@ -12,15 +12,13 @@ import java.util.List;
  */
 public class Main {
 
-	private final int MAX_NODES = 100;
 	private final String SEPARATOR = " "; 
-	private Node root;
 	private int noofnodes;
 	private int distanceMatrix[][];
 	private MessageBus messageBus = new MessageBus();
 	private List<Node> nodeList;
 	private List<Thread> threadList;
-	
+	public static volatile boolean completed = false;
 	
 	
 	public static void main(String[] args) {
@@ -29,7 +27,11 @@ public class Main {
 		simulator.processInput();
 		//simulator.printInfo();
 		simulator.init();
+		simulator.loop();
 		simulator.printStats();
+		
+		//shutdown the simulator
+		simulator.shutdown();
 	}
 	
 	public void processInput(){
@@ -83,20 +85,30 @@ public class Main {
 		
 	}
 	
+	public void loop(){
+		while(!completed);
+		System.out.println("MST computation complete.");
+	}
+	
+	public void shutdown(){
+		System.exit(1);
+	}
+	
 	public void printStats(){
-		for(int i=0;i<noofnodes;i++){
-			try {
-				threadList.get(i).join();
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			}
-		}
+//		for(int i=0;i<noofnodes;i++){
+//			try {
+//				threadList.get(i).join();
+//			} catch (InterruptedException e) {
+//				e.printStackTrace();
+//			}
+//		}
 		for(int i=0;i<noofnodes;i++){
 			System.out.println(nodeList.get(i));
 		}
 		for(int i=0;i<noofnodes;i++){
 			nodeList.get(i).nodeStats();
 		}
+		messageBus.printMessageBus();
 	}
 	
 	public void printInfo(){

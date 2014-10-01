@@ -9,8 +9,8 @@ import java.util.List;
  */
 public class MessageBus {
 	
-	List<Message> messageStore = new ArrayList<Message>(Property.MAX_SIZE);
-	String lock = "lock1";
+	private List<Message> messageStore = new ArrayList<Message>(Property.MAX_SIZE);
+	private String lock = "lock1";
 	
 	public void put(Message message){
 		if(Property.DEBUG){
@@ -37,6 +37,10 @@ public class MessageBus {
 		}
 		
 		return null;
+	}
+	
+	public void printMessageBus(){
+		System.out.println("Message Store:"+messageStore);
 	}
 	
 }
