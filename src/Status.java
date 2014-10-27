@@ -1,4 +1,4 @@
 
 public enum Status {
-	NONE, BASIC, BRANCH, REJECT
+	BASIC, BRANCH, REJECT
 }

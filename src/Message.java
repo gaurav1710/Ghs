@@ -9,9 +9,9 @@ public class Message {
 	private int from;
 	private int to;	
 	private int level;
-	private String fragName;
+	private int fragName;
 	private NodeState state;
-	private int bestWeight;
+	private int bestWeight ;//=0;//= Integer.MAX_VALUE;
 	
 	public int getBestWeight() {
 		return bestWeight;
@@ -51,10 +51,10 @@ public class Message {
 	public void setLevel(int level) {
 		this.level = level;
 	}
-	public String getFragName() {
+	public int getFragName() {
 		return fragName;
 	}
-	public void setFragName(String fragName) {
+	public void setFragName(int fragName) {
 		this.fragName = fragName;
 	}
 	@Override

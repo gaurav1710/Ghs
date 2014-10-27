@@ -6,15 +6,15 @@ public class Fragment {
 	//Level of this fragment
 	private int level;
 	
-	private String name;
+	private int  name;
 	
 	private Edge leastOutgoingEdge;
 
-	public String getName() {
+	public int  getName() {
 		return name;
 	}
 
-	public void setName(String name) {
+	public void setName(int name) {
 		this.name = name;
 	}
 

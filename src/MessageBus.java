@@ -1,5 +1,6 @@
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Vector;
 
 
 /**
@@ -9,7 +10,7 @@ import java.util.List;
  */
 public class MessageBus {
 	
-	private List<Message> messageStore = new ArrayList<Message>(Property.MAX_SIZE);
+	private Vector<Message> messageStore = new Vector<Message>(Property.MAX_SIZE);
 	private String lock = "lock1";
 	
 	public void put(Message message){

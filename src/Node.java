@@ -1,4 +1,6 @@
+import java.util.ArrayList;
 import java.util.List;
+import java.util.ListIterator;
 
 /**
  * Node in a GHS MST
@@ -8,9 +10,9 @@ public class Node implements Runnable {
 
 	// the fragment to which this node belongs to
 	private Fragment fragment;
-
-	// this node's children
-	private List<Node> children;
+        
+    // this node's adjacent edges
+    private List<Edge> adjsEdges;	
 
 	private NodeState state;
 
@@ -18,11 +20,9 @@ public class Node implements Runnable {
 
 	private MessageBus messageBus;
 
-	private int distanceMatrix[][];
+	private int distanceMatrix[];
 
 	private int noofnodes;
-
-	private Status status[];
 
 	private int rec;
 
@@ -36,15 +36,12 @@ public class Node implements Runnable {
 	private int bestNode = -1;
 	private int bestWeight = Integer.MAX_VALUE;
 	private int testNode = -1;
+        private int findCount = -1;
 
 	public Node(int nodeId, MessageBus messageBus) {
 		this.nodeId = nodeId;
 		this.messageBus = messageBus;
 		this.state = NodeState.SLEEP;
-		this.status = new Status[Property.MAX_SIZE];
-		for (int i = 0; i < Property.MAX_SIZE; i++) {
-			status[i] = Status.NONE;
-		}
 	}
 
 	@Override
@@ -71,10 +68,10 @@ public class Node implements Runnable {
 		int nearestNode = nodeId;
 		// find least weighted edge from distance matrix for this node
 		for (int i = 0; i < noofnodes; i++) {
-			if (min > distanceMatrix[nodeId][i]
-					&& distanceMatrix[nodeId][i] != 0) {
+			if (min > distanceMatrix[i]
+					&& distanceMatrix[i] != 0) {
 				nearestNode = i;
-				min = distanceMatrix[nodeId][i];
+				min = distanceMatrix[i];
 
 			}
 		}
@@ -82,7 +79,17 @@ public class Node implements Runnable {
 		if (nearestNode != nodeId) {
 			// change state to FOUND
 			state = NodeState.FOUND;
-			status[nearestNode] = Status.BRANCH;
+                        findCount = 0;
+                         ListIterator<Edge> litr = adjsEdges.listIterator();
+                         while(litr.hasNext()) 
+                         {
+                            Edge element = litr.next();
+                            if(element.getW() == min)
+                            {
+                                element.setStatus(Status.BRANCH);
+                                break;
+                            }
+                        }
 			rec = -1;
 			// send a connect message to the nearest node id
 			Message connectMessage = new Message();
@@ -103,9 +110,11 @@ public class Node implements Runnable {
 		if (message != null) {
 			messagesReceivedNum++;
 			MessageType type = message.getType();
+			if(type == null)
+				return;
 			switch (type) {
 			case CONNECT:
-				if (Property.DEBUG) {
+				if (Property.INFO) {
 					System.out.println("CONNECT message received by (Node"
 							+ nodeId + "):" + message);
 				}
@@ -113,7 +122,7 @@ public class Node implements Runnable {
 				break;
 
 			case INITIATE:
-				if (Property.DEBUG) {
+				if (Property.INFO) {
 					System.out.println("INITIATE message received by (Node"
 							+ nodeId + "):" + message);
 				}
@@ -121,7 +130,7 @@ public class Node implements Runnable {
 				break;
 
 			case TEST:
-				if (Property.DEBUG) {
+				if (Property.INFO) {
 					System.out.println("TEST message received by (Node"
 							+ nodeId + "):" + message);
 				}
@@ -129,7 +138,7 @@ public class Node implements Runnable {
 				break;
 
 			case ACCEPT:
-				if (Property.DEBUG) {
+				if (Property.INFO) {
 					System.out.println("ACCEPT message received by (Node"
 							+ nodeId + "):" + message);
 				}
@@ -137,7 +146,7 @@ public class Node implements Runnable {
 				break;
 
 			case REJECT:
-				if (Property.DEBUG) {
+				if (Property.INFO) {
 					System.out.println("REJECT message received by (Node"
 							+ nodeId + "):" + message);
 				}
@@ -145,7 +154,7 @@ public class Node implements Runnable {
 				break;
 
 			case REPORT:
-				if (Property.DEBUG) {
+				if (Property.INFO) {
 					System.out.println("REPORT message received by (Node"
 							+ nodeId + "):" + message);
 				}
@@ -153,7 +162,7 @@ public class Node implements Runnable {
 				break;
 
 			case CHANGEROOT:
-				if (Property.DEBUG) {
+				if (Property.INFO) {
 					System.out.println("CHANGEROOT message received by (Node"
 							+ nodeId + "):" + message);
 				}
@@ -166,9 +175,23 @@ public class Node implements Runnable {
 	}
 
 	private void processConnectMessage(Message message) {
+                if(state == NodeState.SLEEP)
+                {
+                    initialize();
+                }
+                ListIterator<Edge> litr = adjsEdges.listIterator();
+                Edge element = null;
+                while(litr.hasNext()) 
+                {
+                        element = litr.next();
+                        if(element.getVI() == message.getFrom())
+                        {
+                                break;
+                        }
+                }
 		if (message.getLevel() < fragment.getLevel()) {
 			// combine with LT rule
-			status[message.getFrom()] = Status.BRANCH;
+                        element.setStatus(Status.BRANCH);
 			Message initMessage = new Message();
 			initMessage.setFrom(nodeId);
 			initMessage.setTo(message.getFrom());
@@ -176,26 +199,39 @@ public class Node implements Runnable {
 			initMessage.setFragName(fragment.getName());
 			initMessage.setState(state);
 			initMessage.setType(MessageType.INITIATE);
-			System.out.println("Sending INITIATE message (Node" + nodeId
-					+ " )...");
+			if(Property.DEBUG){
+				System.out.println("Sending INITIATE message (Node" + nodeId
+						+ " )...");
+			}
 			sendMessage(initMessage);
-		} else if (status[message.getFrom()] == Status.BASIC) {
+                        if(state == NodeState.FIND)
+                        {
+                            findCount++;
+                        }
+		} else if (element.getStatus() == Status.BASIC) {
 			try {
-				Thread.sleep(Property.WAIT);
-			} catch (InterruptedException e) {
+				//Thread.sleep(Property.WAIT);
+				messageBus.put(message);
+				return;
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
 		} else if (fragment.getLevel() == message.getLevel()) {
 			// combine with EQ rule
+			//fragment.setLevel(fragment.getLevel()+1);
+			
 			Message initMessage = new Message();
 			initMessage.setType(MessageType.INITIATE);
 			initMessage.setFrom(nodeId);
 			initMessage.setTo(message.getFrom());
 			initMessage.setLevel(fragment.getLevel() + 1);
-			initMessage.setFragName(fragment.getName());
+			initMessage.setFragName(element.getW());
+			//initMessage.setFragName(fragment.getName());
 			initMessage.setState(NodeState.FIND);
-			System.out.println("Sending INITIATE message (Node" + nodeId
-					+ " )...");
+			if(Property.DEBUG){
+				System.out.println("Sending INITIATE message (Node" + nodeId
+						+ " )...");
+			}
 			sendMessage(initMessage);
 		}
 	}
@@ -205,21 +241,33 @@ public class Node implements Runnable {
 		fragment.setName(message.getFragName());
 		state = message.getState();
 		parent = message.getFrom();
-
-		for (int i = 0; i < noofnodes; i++) {
-			if (distanceMatrix[nodeId][i] > 0 && i != message.getFrom()
-					&& status[i] == Status.BRANCH) {
-				Message initMessage = new Message();
+                ListIterator<Edge> litr = adjsEdges.listIterator();
+                Edge element = null;
+                while(litr.hasNext()) 
+                {
+                        element = litr.next();
+                        if(element.getVI() != message.getFrom() && element.getStatus() == Status.BRANCH)
+                        {
+                                Message initMessage = new Message();
+                                initMessage.setType(MessageType.INITIATE);
 				initMessage.setFrom(nodeId);
-				initMessage.setTo(i);
+				initMessage.setTo(element.getVI());
 				initMessage.setLevel(message.getLevel());
 				initMessage.setFragName(message.getFragName());
 				initMessage.setState(message.getState());
-				System.out.println("Sending INITIATE message (Node" + nodeId
-						+ " )...");
+				if(Property.DEBUG){
+					System.out.println("Sending INITIATE message (Node" + nodeId
+							+ " )...");
+				}
 				sendMessage(initMessage);
-			}
-		}
+                                if(state == NodeState.FIND)
+                                {
+                                    findCount++;
+                                }
+                        }
+                }
+
+		
 
 		if (state == NodeState.FIND) {
 			rec = -1;
@@ -231,15 +279,18 @@ public class Node implements Runnable {
 	private void findMin() {
 		int min = Integer.MAX_VALUE;
 		int nearestNode = nodeId;
-		for (int i = 0; i < noofnodes; i++) {
-			if (min > distanceMatrix[nodeId][i]
-					&& distanceMatrix[nodeId][i] != 0
-					&& status[i] == Status.BASIC) {
-				nearestNode = i;
-				min = distanceMatrix[nodeId][i];
-
-			}
-		}
+                ListIterator<Edge> litr = adjsEdges.listIterator();
+                Edge element = null;
+                while(litr.hasNext()) 
+                {
+                        element = litr.next();
+                        if(element.getStatus() == Status.BASIC && element.getW() < min)
+                        {
+                            min = element.getW();
+                            nearestNode = element.getVI();
+                        }
+                }
+                
 		if (nearestNode != nodeId) {
 			testNode = nearestNode;
 			Message testMessage = new Message();
@@ -256,11 +307,8 @@ public class Node implements Runnable {
 	}
 
 	private void report() {
-		if (rec == -1)
-			rec = 0;
-		if (rec >= 0 && rec < noofnodes) {
-			if (/* status[rec] == Status.BRANCH && */parent != rec
-					&& testNode == -1) {
+		if (findCount == 0 && testNode == -1) 
+                {
 				state = NodeState.FOUND;
 				Message reportMessage = new Message();
 				reportMessage.setType(MessageType.REPORT);
@@ -268,23 +316,41 @@ public class Node implements Runnable {
 				reportMessage.setTo(parent);
 				reportMessage.setBestWeight(bestWeight);
 				sendMessage(reportMessage);
-			}
+			
 		}
 	}
 
 	private void processTestMessage(Message message) {
+                if(state == NodeState.SLEEP)
+                {
+                    initialize();
+                }
 		if (fragment.getLevel() < message.getLevel()) {
 			try {
-				Thread.sleep(Property.WAIT);
-			} catch (InterruptedException e) {
+				//Thread.sleep(Property.WAIT);
+				messageBus.put(message);
+				return;
+			} catch (Exception e) {
 				e.printStackTrace();
 			}
-			// return;
 		}
-		if (fragment.getName().compareToIgnoreCase(message.getFragName()) == 0) {
-			// Internal edge
-			if (status[message.getFrom()] == Status.BASIC)
-				status[message.getFrom()] = Status.REJECT;
+		if (fragment.getName() == message.getFragName())    // Internal edge
+                {
+                            ListIterator<Edge> litr = adjsEdges.listIterator();
+                            Edge element = null;
+                            while(litr.hasNext()) 
+                            {
+                                element = litr.next();
+                                if(element.getVI() == message.getFrom())
+                                {
+                                    break;
+                                }
+                            }
+			
+			if (element.getStatus() == Status.BASIC)
+                        {
+				 element.setStatus(Status.REJECT);
+                        }
 
 			if (testNode != message.getFrom()) {
 				Message rejectMessage = new Message();
@@ -295,7 +361,9 @@ public class Node implements Runnable {
 			} else {
 				findMin();
 			}
-		} else {
+		}
+                else 
+                {
 			Message acceptMessage = new Message();
 			acceptMessage.setType(MessageType.ACCEPT);
 			acceptMessage.setFrom(nodeId);
@@ -307,23 +375,46 @@ public class Node implements Runnable {
 
 	private void processAcceptMessage(Message message) {
 		testNode = -1;
-		if (distanceMatrix[nodeId][message.getFrom()] < bestWeight) {
-			bestWeight = distanceMatrix[nodeId][message.getFrom()];
+                ListIterator<Edge> litr = adjsEdges.listIterator();
+                Edge element = null;
+                while(litr.hasNext()) 
+                {
+                    element = litr.next();
+                    if(element.getVI() == message.getFrom())
+                    {
+                        break;
+                    }
+                }
+		if (element.getW() < bestWeight) {
+			bestWeight = element.getW();
 			bestNode = message.getFrom();
 		}
 		report();
 	}
 
 	private void processRejectMessage(Message message) {
-		if (status[message.getFrom()] == Status.BASIC) {
-			status[message.getFrom()] = Status.REJECT;
+                ListIterator<Edge> litr = adjsEdges.listIterator();
+                Edge element = null;
+                while(litr.hasNext()) 
+                {
+                        element = litr.next();
+                        if(element.getVI() == message.getFrom())
+                        {
+                                    break;
+                        }
+                }                        
+		if (element.getStatus() == Status.BASIC) 
+                {
+			 element.setStatus(Status.REJECT);
 		}
 		findMin();
 	}
 
 	private void processReportMessage(Message message) {
-		if (message.getFrom() == parent) {
+		if (message.getFrom() != parent) {
+                        findCount--;
 			if (message.getBestWeight() < bestWeight) {
+				
 				bestWeight = message.getBestWeight();
 				bestNode = message.getFrom();
 			}
@@ -332,8 +423,10 @@ public class Node implements Runnable {
 		} else {
 			if (state == NodeState.FIND) {
 				try {
-					Thread.sleep(Property.WAIT);
-				} catch (InterruptedException e) {
+					//Thread.sleep(Property.WAIT);
+					messageBus.put(message);
+					return;
+				} catch (Exception e) {
 					e.printStackTrace();
 				}
 			} else if (message.getBestWeight() > bestWeight) {
@@ -352,14 +445,25 @@ public class Node implements Runnable {
 	}
 
 	private void changeRoot() {
-		if (status[bestNode] == Status.BRANCH) {
+            
+                ListIterator<Edge> litr = adjsEdges.listIterator();
+                Edge element = null;
+                while(litr.hasNext()) 
+                {
+                        element = litr.next();
+                        if(element.getVI() == bestNode)
+                        {
+                                    break;
+                        }
+                }
+		if (element.getStatus() == Status.BRANCH) {
 			Message crootMessage = new Message();
 			crootMessage.setFrom(nodeId);
 			crootMessage.setTo(bestNode);
 			crootMessage.setType(MessageType.CHANGEROOT);
 			sendMessage(crootMessage);
 		} else {
-			status[bestNode] = Status.BRANCH;
+			element.setStatus(Status.BRANCH);
 			Message connectMessage = new Message();
 			connectMessage.setFrom(nodeId);
 			connectMessage.setTo(bestNode);
@@ -382,7 +486,9 @@ public class Node implements Runnable {
 			message = messageBus.getMessage(nodeId);
 			long end = System.currentTimeMillis() - start;
 			if (end >= Property.POLL_TIMEOUT) {
-				System.out.println("Message polling timed out...");
+				if(Property.DEBUG){
+					System.out.println("Message polling timed out...");
+				}
 				break;
 			}
 
@@ -417,14 +523,6 @@ public class Node implements Runnable {
 		this.fragment = fragment;
 	}
 
-	public List<Node> getChildren() {
-		return children;
-	}
-
-	public void setChildren(List<Node> children) {
-		this.children = children;
-	}
-
 	public NodeState getState() {
 		return state;
 	}
@@ -449,13 +547,35 @@ public class Node implements Runnable {
 		this.messageBus = messageBus;
 	}
 
-	public int[][] getDistanceMatrix() {
+	public int[] getDistanceMatrix() {
 		return distanceMatrix;
 	}
 
-	public void setDistanceMatrix(int[][] distanceMatrix) {
-		this.distanceMatrix = distanceMatrix;
+	public void setDistanceMatrix(int[] distanceMatrix) {
+           this.distanceMatrix = new int[noofnodes];
+           System.arraycopy(distanceMatrix, 0, this.distanceMatrix, 0, noofnodes);
 	}
+        
+        // initialize this node's adjacent edges
+        public void initAdsEdges()
+        {
+            adjsEdges = new ArrayList<Edge>();
+            for(int i=0;i<noofnodes;i++)
+            {
+               if(distanceMatrix[i] != 0)
+               {
+                    Edge e = new Edge();
+                    e.setUI(nodeId);
+                    e.setVI(i);
+                    //e.setU(this);
+                    //e.setV();
+                    e.setW(distanceMatrix[i]);
+                    e.setStatus(Status.BASIC);
+                    adjsEdges.add(e);
+               }
+                
+            }
+        }
 
 	public int getNoofnodes() {
 		return noofnodes;
@@ -464,7 +584,25 @@ public class Node implements Runnable {
 	public void setNoofnodes(int noofnodes) {
 		this.noofnodes = noofnodes;
 	}
+	
 
+	public int getParent() {
+		return parent;
+	}
+
+	public void setParent(int parent) {
+		this.parent = parent;
+	}
+
+	public List<Edge> getAdjsEdges() {
+		return adjsEdges;
+	}
+
+	public void setAdjsEdges(List<Edge> adjsEdges) {
+		this.adjsEdges = adjsEdges;
+	}
+
+	
 	@Override
 	public String toString() {
 		return "Node [fragment=" + fragment + ", state=" + state + ", nodeId="
