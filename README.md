@@ -1,4 +1,1 @@
-Ghs
-===
-Assignment2
---- 2013MCS2556
+Simulation of the Gallager, Humblet and Spira distributed algorithm to construct a MST.
